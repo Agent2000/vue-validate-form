@@ -3,23 +3,42 @@ import { Form, Field, ErrorMessage } from 'vee-validate'
 import { ref } from 'vue'
 import * as yup from 'yup'
 
-const schema = {
+const formRef = ref(null)
+const formValid = ref(false)
+
+const schema = yup.object({
   firstname: yup.string().required('Имя обязательно для заполнения'),
   lastname: yup.string().required('Фамилия обязательна для заполнения'),
-}
-
-const city = ref()
-
-const cityOptions = ref([
-  { text: 'Москва', value: 'msc' },
-  { text: 'СПБ', value: 'spb' },
-  { text: 'Новосибирск', value: 'ovb' },
-  { text: 'Екатеринбург', value: 'svx' },
-  { text: 'Другой', value: 'other' },
-])
+  country: yup.string().required('Страна обязательна для заполнения'),
+  city: yup.string().required('Город обязателен для заполнения'),
+  phone: yup
+    .string()
+    .required('Телефон обязательный для заполнения')
+    .matches(/^\+?[0-9]{10,15}$/, 'Введите правильный телефон'),
+  email: yup
+    .string()
+    .required('Телефон обязателен для заполнения')
+    .email('Введите корректный Email'),
+  password: yup
+    .string()
+    .required('Введите пароль')
+    .min(4, 'Пароль должен быть не короче 4 символов'),
+  // .matches(/[A-Za-z]/, 'Пароль должен содержать буквы')
+  // .matches(/[0-9]/, 'Пароль должен содержать цифры'),
+  confirmPassword: yup
+    .string()
+    .required('Повторите пароль')
+    .oneOf([yup.ref('password')], 'Пароли не совпадают'),
+  comments: yup.string(),
+  terms: yup
+    .boolean()
+    .transform((value) => value === 'on')
+    .oneOf([false], 'Вы должны принять условия'),
+})
 
 const onFormSubmit = (values) => {
-  alert('Форма отправлена')
+  // alert('Форма отправлена')
+  formValid.value = true
   console.log(values)
 }
 </script>
@@ -27,7 +46,12 @@ const onFormSubmit = (values) => {
 <template>
   <div class="container">
     <h1 class="title">Регистрация</h1>
-    <Form class="registration-form" :validation-schema="schema" @submit="onFormSubmit">
+    <Form
+      ref="formRef"
+      class="registration-form"
+      :validation-schema="schema"
+      @submit="onFormSubmit"
+    >
       <div class="form-group">
         <label class="form-label" for="firstname">Имя *</label>
         <Field class="form-control" name="firstname" type="text" id="firstname" />
@@ -41,28 +65,31 @@ const onFormSubmit = (values) => {
       <div class="form-group">
         <label class="form-label" for="country">Страна/Регион *</label>
         <Field class="form-control" name="country" type="text" id="country" />
+        <ErrorMessage name="country" class="message--error" />
       </div>
       <div class="form-group">
         <label class="form-label" for="city">Город *</label>
         <div class="custom-select">
-          <v-select v-model="city" label="text" :options="cityOptions"></v-select>
-          <!-- <select class="form-control" id="city" name="city" required>
+          <Field as="select" class="form-control" id="city" name="city" required>
             <option value="" disabled selected>Выберите город</option>
             <option value="msc">Москва</option>
             <option value="spb">Санкт-Петербург</option>
             <option value="ovb">Новосибирск</option>
             <option value="svx">Екатеринбург</option>
             <option value="other">Другой</option>
-          </select> -->
+          </Field>
+          <ErrorMessage name="city" class="message--error" />
         </div>
       </div>
       <div class="form-group">
         <label class="form-label" for="phone">Телефон *</label>
         <Field class="form-control" type="tel" name="phone" id="phone" />
+        <ErrorMessage name="phone" class="message--error" />
       </div>
       <div class="form-group">
         <label class="form-label" for="email">Email *</label>
         <Field class="form-control" type="email" name="email" id="email" />
+        <ErrorMessage name="email" class="message--error" />
       </div>
       <div class="form-group form-group--password">
         <label class="form-label" for="password">Пароль *</label>
@@ -75,10 +102,18 @@ const onFormSubmit = (values) => {
             <path d="M12 10c-1.1 0-2 .9-2 2s.9 2 2 2c1.1 0 2-.9 2-2s-.9-2-2-2z" />
           </svg>
         </button>
+        <ErrorMessage name="password" class="message--error" />
       </div>
       <div class="form-group form-group--password">
-        <label class="form-label" for="confirm-password">Подтвердите пароль *</label>
-        <Field class="form-control" type="password" name="confirm-password" id="confirm-password" />
+        <label class="form-label" for="confirmPassword">Подтвердите пароль *</label>
+        <Field
+          class="form-control"
+          type="password"
+          name="confirmPassword"
+          id="confirmPassword"
+          validate-on-input
+          :validateOnValueUpdate="true"
+        />
         <button class="btn-icon btn-icon--password" type="button">
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24">
             <path
@@ -87,21 +122,24 @@ const onFormSubmit = (values) => {
             <path d="M12 10c-1.1 0-2 .9-2 2s.9 2 2 2c1.1 0 2-.9 2-2s-.9-2-2-2z" />
           </svg>
         </button>
+        <ErrorMessage name="confirmPassword" class="message--error" />
       </div>
       <div class="form-group form-group--full-width">
         <label class="form-label" for="comments">Дополнительная информация</label>
-        <textarea class="form-control" id="comments" name="comments"></textarea>
+        <Field as="textarea" class="form-control" id="comments" name="comments"></Field>
+        <ErrorMessage name="comments" class="message--error" />
       </div>
       <div class="form-group form-group--full-width">
         <label class="form-label form-label--checkbox" for="terms">
           <Field type="checkbox" id="terms" name="terms" />
           Я согласен c условиями пользования и политикой конфиденциальности
         </label>
+        <ErrorMessage name="terms" class="message--error" />
       </div>
       <button class="btn" type="submit">Зарегистрироваться</button>
-      <button class="btn" type="reset">Очистить форму</button>
+      <button @click="formRef.value.resetForm()" class="btn" type="reset">Очистить форму</button>
     </Form>
-    <div class="message message--success">Регистрация прошла успешно!</div>
+    <div v-if="formValid" class="message message--success">Регистрация прошла успешно!</div>
   </div>
 </template>
 
@@ -160,7 +198,8 @@ body {
   margin-bottom: 0.75rem;
 }
 
-.form-control {
+.form-control,
+.v-select {
   width: 100%;
   font-size: 1rem;
   padding: 1rem;
@@ -175,8 +214,8 @@ body {
 
 .custom-select::after {
   content: '';
-  background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M7 10l5 5 5-5z"/></svg>')
-    no-repeat center;
+  /* background: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24"><path d="M7 10l5 5 5-5z"/></svg>')
+    no-repeat center; */
   background-size: 30px;
   width: 30px;
   height: 30px;
@@ -280,14 +319,5 @@ textarea.form-control {
 
 .message--error {
   color: #f44336;
-}
-
-.custom-select {
-  width: 100%;
-  font-size: 1rem;
-  padding: 1rem;
-  background-color: #f6f6f6;
-  border: 1px solid #f6f6f6;
-  border-radius: 8px;
 }
 </style>
